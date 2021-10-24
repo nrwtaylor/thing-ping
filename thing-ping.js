@@ -78,8 +78,13 @@ function handleLine(line) {
   //  console.log(data.toString());
 
   // Get the from, to and subject from the datagram.
-  var from = "ping";
-  var to = "kokopelli:#general@kaiju.discord"; // or var to = "192.168.10.123:10110";
+
+  // Datagram is an *implied* request from a channel address.
+  var from = "kokopelli:#general@kaiju.discord"; // or var to = "192.168.10.123:10110";
+  var to = "ping";
+
+//  var from = "ping";
+//  var to = "kokopelli:#general@kaiju.discord"; // or var to = "192.168.10.123:10110";
   const subject = line;
   var agent_input = "ping";
 
