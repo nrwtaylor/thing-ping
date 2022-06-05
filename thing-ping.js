@@ -115,6 +115,88 @@ function handleLine(line) {
   var arr = { from: from, to: to, subject: subject, agent_input: agent_input, precedence:'routine' };
   var datagram = JSON.stringify(arr);
 
+
+  const transport = "gearman";
+
+
+  if (transport === "apache") {
+    axios
+      .post("https://stackr.ca/api/whitefox/message", datagram, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+      .then((result) => {
+const thing_report = result.data.thingReport;
+
+console.log("thing_report", thing_report);
+
+
+    // Create a fallback message.
+    // Which says 'sms'.
+    sms = "sms";
+    message = "sms";
+
+    try {
+//      var thing_report = JSON.parse(job.response);
+      var sms = thing_report.sms;
+      var message = thing_report.message;
+      //var agent = thing_report.agent;
+      //var uuid = thing_report.thing.uuid;
+    } catch (e) {
+      console.log(e);
+
+      var sms = "quiet";
+      var message = "Quietness. Just quietness.";
+    }
+
+    console.log(sms);
+    console.log(message);
+    console.log(thing_report.png);
+    console.log(thing_report.pngs);
+
+    thing_report.log = "nulled";
+    console.log(thing_report);
+    console.log(thing_report.link);
+    //    const image_url = thing_report && thing_report.link ? thing_report.link + '.png' : null
+
+    const image_url =
+      thing_report && thing_report.image_url ? thing_report.image_url : null;
+
+    console.log(image_url);
+    //    var agent = thing_report.agent;
+    //    var uuid = thing_report.thing.uuid;
+    //var image_url = "https://stackr.ca/pixel_sml.png";
+    //    var image_url = 'https://stackr.ca/thing/' + uuid + '/' + agent + '.png';
+
+    // Respond to the channel with the sms
+    // channel response.
+    //    discordMessage.channel.send(sms, {files: ["https://stackr.ca/pixel_sml.png"]});
+    //    discordMessage.channel.send(sms, {files: [image_url]});
+    if (sms !== null) {
+      if (image_url === null) {
+        discordMessage.channel.send(sms);
+      } else {
+        discordMessage.channel.send(sms, { files: [image_url] });
+      }
+    }
+
+
+
+
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  }
+
+
+
+
+
+  if (transport === "gearman") {
+
+
   try {
     var job = client.submitJob("call_agent", datagram);
     console.log("SENT DATAGRAM TO GEARMAN");
@@ -183,4 +265,6 @@ function handleLine(line) {
     // message.lineReply(sms); //Line (Inline) Reply with mention
     // message.lineReplyNoMention(`My name is ${client.user.username}`); //L
   });
+}
+
 }
