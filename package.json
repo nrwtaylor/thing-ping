@@ -1,0 +1,35 @@
+{
+  "name": "thing-udp",
+  "version": "1.0.0",
+  "description": "Thing node connector for stack-agent-thing framework.",
+  "main": "thing-udp.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nrwtaylor/thing-udp.git"
+  },
+  "keywords": [
+    "thing",
+    "discord",
+    "stack",
+    "agent"
+  ],
+  "author": "NRW Taylor",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/nrwtaylor/thing-discord/issues"
+  },
+  "homepage": "https://github.com/nrwtaylor/thing-udp#readme",
+  "dependencies": {
+    "discord.js": "^13.0.1",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "gearmanode": "^0.9.2",
+    "ping-wrapper": "^0.0.3",
+    "udp-node": "^2.1.0",
+    "var_dump": "^1.0.5",
+    "winston": "^0.7.1"
+  }
+}
