@@ -34,7 +34,7 @@ User=nobody
 Group=nogroup
 Environment=PATH=/usr/bin:/usr/local/bin
 Environment=NODE_ENV=production
-WorkingDirectory=/var/www/thing-discord
+WorkingDirectory=/var/www/thing-ping
 
 [Install]
 WantedBy=multi-user.target
