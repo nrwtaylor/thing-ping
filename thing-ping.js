@@ -4,6 +4,8 @@ require("dotenv").config();
 
 net = require("net");
 
+const axios = require("axios");
+
 const datagrams = [{}];
 
 const var_dump = require("var_dump");
@@ -28,8 +30,12 @@ Standard stack stuff above.
 
 var hosts = process.env.STATIONS.split(" ");
 var channel = process.env.CHANNEL;
-var minutes = 1,
-the_interval = minutes * 60 * 1000;
+var transport = process.env.TRANSPORT;
+var interval_minutes = process.env.INTERVAL;
+var http_transport = process.env.HTTP_TRANSPORT;
+
+//var minutes = 1,
+the_interval = interval_minutes * 60 * 1000;
 
 setInterval(function () {
   //exec("ping -c 3 localhost", puts);
@@ -75,17 +81,6 @@ function systemPing(host) {
 }
 
 function handleLine(line) {
-  //  console.log(data.toString());
-
-  // Get the from, to and subject from the datagram.
-
-  // Context A. Datagram is an *implied* request from a channel address.
-  //var from = "kokopelli:#general@kaiju.discord"; // or var to = "192.168.10.123:10110";
-  //var to = "ping";
-
-  // Context B. Datagram is originated from agent.
-  // So the datagram has directionality.
-
   /*
         REFERENCE
         $datagram = [
@@ -114,14 +109,12 @@ function handleLine(line) {
 
   var arr = { from: from, to: to, subject: subject, agent_input: agent_input, precedence:'routine' };
   var datagram = JSON.stringify(arr);
-
-
-  const transport = "gearman";
+//       .post("https://stackr.ca/api/whitefox/message", datagram, {
 
 
   if (transport === "apache") {
     axios
-      .post("https://stackr.ca/api/whitefox/message", datagram, {
+       .post(http_transport, datagram, {
         headers: {
           "Content-Type": "application/json",
         },
@@ -164,20 +157,14 @@ console.log("thing_report", thing_report);
       thing_report && thing_report.image_url ? thing_report.image_url : null;
 
     console.log(image_url);
-    //    var agent = thing_report.agent;
-    //    var uuid = thing_report.thing.uuid;
-    //var image_url = "https://stackr.ca/pixel_sml.png";
-    //    var image_url = 'https://stackr.ca/thing/' + uuid + '/' + agent + '.png';
-
-    // Respond to the channel with the sms
-    // channel response.
-    //    discordMessage.channel.send(sms, {files: ["https://stackr.ca/pixel_sml.png"]});
-    //    discordMessage.channel.send(sms, {files: [image_url]});
     if (sms !== null) {
       if (image_url === null) {
-        discordMessage.channel.send(sms);
+console.log(sms);
+//        discordMessage.channel.send(sms);
       } else {
-        discordMessage.channel.send(sms, { files: [image_url] });
+console.log(sms);
+console.log("image(s) available");
+//        discordMessage.channel.send(sms, { files: [image_url] });
       }
     }
 
