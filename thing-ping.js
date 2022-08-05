@@ -9,8 +9,6 @@ const fs = require("fs");
 
 const datagrams = [{}];
 
-const var_dump = require("var_dump");
-
 // Use Gearman to provide the stack connector.
 var gearmanode = require("gearmanode");
 
@@ -18,7 +16,7 @@ var sys = require("sys");
 var exec = require("child_process").exec;
 const childProcess = require("child_process");
 // 26 September 2021
-console.log("thing-ping 1.0.2 23 July 2022");
+console.log("thing-ping 1.0.3 30 July 2022");
 
 const client = gearmanode.client();
 //
@@ -39,50 +37,43 @@ var snapshotFilename = process.env.SNAPSHOT;
 //var minutes = 1,
 the_interval = interval_milliseconds;
 
+var ping = function (host, username, password) {
+  return new Promise(function (resolve, reject) {
+    /*stuff using username, password*/
+    const t = new Date();
+    const p = execute("/bin/ping -c 3 " + host);
+    p.then((result) => {
+      console.log(result);
+      resolve({ text: result, refreshedAt: t, host: host });
+    }).catch((error) => {
+      console.log(error);
+      reject(error);
+    });
+  });
+};
+
 setInterval(function () {
   //exec("ping -c 3 localhost", puts);
 
-  //  console.log("I am doing my 1 minute check again");
-  // do your stuff here
-  console.log("hosts", hosts);
+  //  console.log("I am doing my N minute check again");
+
   const arr = [];
   const promises = [];
   hosts.map((h) => {
     var host = h;
-    console.log("ping host", host);
-    /*
-    execute("/bin/ping -c 3 " + host).then((result) => {
-      const line = puts(null, result, null, host);
-      console.log("result", result);
-      arr.push({ data: line });
-    });
-*/
-
-    const p = execute("/bin/ping -c 3 " + host);
+    const p = ping(host, "a", "b");
     promises.push(p);
-    //    const child = exec("/bin/ping -c 3 " + host, (error, stdout, stderr) => {
-    //      console.log("hostx", host);
-    //      const line = puts(error, stdout, stderr, host);
-    //    });
-
-    //console.log("host line", host, line);
-    //arr.push({data:test});
-    //console.log(test);
   });
 
-  Promise.all(promises).then((values) => {
+  Promise.all(promises).then((values, index) => {
     const arr = [];
 
-    console.log(values);
     values.map((result) => {
-      const line = puts(null, result, null, null);
-      console.log("result", result);
-      arr.push({ data: line });
+      const line = puts(null, result.text, null, result.host);
+      arr.push({ data: line, host: result.host, refreshedAt: result.refreshedAt });
     });
 
-    console.log("jsonData arr", arr);
-    const jsonData = JSON.stringify({ test: arr });
-    console.log("jsonData stringify", jsonData);
+    const jsonData = JSON.stringify({ ping: arr });
     fs.writeFile(snapshotFilename, jsonData, "utf8", (err) => {
       if (err) {
         console.log(`Error writing file: ${err}`);
@@ -93,6 +84,9 @@ setInterval(function () {
   });
 }, the_interval);
 
+/*
+A function to process the exec return.
+*/
 function puts(error, stdout, stderr, host) {
   console.log("host", host);
   console.log("stdout", stdout);
@@ -104,6 +98,9 @@ function puts(error, stdout, stderr, host) {
   return line;
 }
 
+/*
+Vestigial function. Deprecate? and remove.
+*/
 function systemPing(host) {
   console.log("making a systemPing call");
   try {
@@ -139,8 +136,6 @@ function handleLine(line) {
 
   //  match = false;
 
-  //console.log(subject);
-
   // Otherwise this is a different datagram.
   // Save it in local memory cache.
 
@@ -156,7 +151,6 @@ function handleLine(line) {
     precedence: "routine",
   };
   var datagram = JSON.stringify(arr);
-  //       .post("https://stackr.ca/api/whitefox/message", datagram, {
 
   if (transport === "apache") {
     axios
@@ -167,8 +161,6 @@ function handleLine(line) {
       })
       .then((result) => {
         const thing_report = result.data.thingReport;
-
-        //console.log("thing_report", thing_report);
 
         // Create a fallback message.
         // Which says 'sms'.
@@ -194,9 +186,6 @@ function handleLine(line) {
         console.log(thing_report.pngs);
 
         thing_report.log = "nulled";
-        //    console.log(thing_report);
-        //    console.log(thing_report.link);
-        //    const image_url = thing_report && thing_report.link ? thing_report.link + '.png' : null
 
         const image_url =
           thing_report && thing_report.image_url
