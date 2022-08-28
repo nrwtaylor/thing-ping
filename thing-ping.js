@@ -1,60 +1,126 @@
 #!/usr/bin/env node
 
 require("dotenv").config();
+crypto = require("crypto");
+
+//const { uuid } = require('uuidv4');
+const { v4: uuidv4 } = require('uuid');
 
 net = require("net");
 
+const axios = require("axios");
 const datagrams = [{}];
-
-const var_dump = require("var_dump");
-
-// Use Gearman to provide the stack connector.
-var gearmanode = require("gearmanode");
 
 var sys = require("sys");
 var exec = require("child_process").exec;
 
-console.log("thing-ping 1.0.0 26 September 2021");
+// 26 September 2021
+console.log("thing-ping 1.0.3 27 August 2022");
 
-const client = gearmanode.client();
+//const client = gearmanode.client();
 //
 /*
 Standard stack stuff above.
 */
-//var ping = require('ping');
-//var Ping = require('ping-wrapper')
-//Ping.configure();
 
-var hosts = ["192.168.1.254", "172.22.96.1", "www.stackr.ca", "8.8.8.8"];
-//var hosts = ["www.stackr.ca"];
-var minutes = 5,
-  the_interval = minutes * 60 * 1000;
-setInterval(function () {
-  //exec("ping -c 3 localhost", puts);
+var hosts = process.env.STATIONS.split(" ");
+var channel = process.env.CHANNEL;
+var transport = process.env.TRANSPORT;
+var interval_minutes = process.env.INTERVAL;
+var http_transport = process.env.HTTP_TRANSPORT;
+//var username = process.env.USERNAME;
+var username = uuidv4();
+var password = process.env.PASSWORD;
+var from = process.env.FROM;
 
-  //  console.log("I am doing my 1 minute check again");
-  // do your stuff here
-  console.log("hosts", hosts);
-  hosts.map((h) => {
-    var host = h;
-    console.log("ping host", host);
-//'"' + process.execPath + '" child.js'
-    const child = exec("/bin/ping -c 3 " + host, (error, stdout, stderr) => {
- //   const child = exec("ping -c 3 " + host, (error, stdout, stderr) => {
-      console.log("hostx", host);
-      puts(error, stdout, stderr, host);
-    });
+var station = process.env.STATION;
+var clientSecret = process.env.CLIENT_SECRET;
+
+//var minutes = 1,
+the_interval = interval_minutes * 60 * 1000;
+
+const hash = crypto.createHmac("sha256", clientSecret);
+
+var data = hash.update(username + password);
+//Creating the hash in the required format
+var gen_hash = data.digest("hex");
+
+const pass = "";
+
+// Attempt to login in user.
+// If not create an account.
+
+signupUser({
+  username: gen_hash,
+  password: pass,
+  email: username + "@null",
+})
+  .then((token) => {
+    return loginUser({
+      username: gen_hash,
+      password: pass,
+    })
+      .then((token2) => {
+        console.log("Login handleSubmit", token2);
+
+        const { accessToken } = token2;
+
+        setInterval(function () {
+          //exec("ping -c 3 localhost", puts);
+
+          //  console.log("I am doing my 1 minute check again");
+          // do your stuff here
+          console.log("hosts", hosts);
+          console.log("accessToken", accessToken);
+          hosts.map((h) => {
+            var host = h;
+            console.log("ping host", host);
+            const child = exec(
+              "/bin/ping -c 3 " + host,
+              (error, stdout, stderr) => {
+                console.log("hostx", host);
+                const a = puts(
+                  error,
+                  stdout,
+                  stderr,
+                  station + " " + host,
+                );
+
+                var datagram = JSON.stringify(a);
+
+                if (transport === "apache") {
+                  const u = process.env.API_PREFIX;
+                  datagramCall(u, datagram, accessToken);
+                  datagramCall(http_transport, datagram, null);
+                }
+              }
+            );
+          });
+        }, the_interval);
+      })
+      .catch((error) => {
+        console.log(error);
+        //    const token = signupUser({
+        //      username: gen_hash,
+        //      password: pass,
+        //      email: from,
+        //    });
+      });
+  })
+  .catch((error) => {
+errorResponse(error);
+
+//    console.log(error);
   });
-}, the_interval);
 
-function puts(error, stdout, stderr, host) {
-  console.log("host", host);
-  console.log("stdout",stdout);
+function puts(error, stdout, stderr, text) {
+  console.log("host", text);
+  console.log("stdout", stdout);
   const lines = stdout.split("\n");
-  console.log("test", lines[lines.length -2]);
-  const line = host + " " + lines[lines.length - 2] ; // Because last lin>
-console.log("line",line);
-  handleLine(line);
+  console.log("test", lines[lines.length - 2]);
+  const line = text + " " + lines[lines.length - 2]; // Because last lin>
+  console.log("line", line);
+  return handleLine(line);
 }
 
 function systemPing(host) {
@@ -62,112 +128,164 @@ function systemPing(host) {
   try {
     var exec = require("child_process").exec;
     const makePingCall = (error, stdout, stderr) => {
-      //console.log("makePingCall", error, stdout, stderr);
-      console.log("stdout", stdout);
       return stdout;
     };
 
     exec(`ping ${host} -c 3`, makePingCall);
     return makePingCall;
   } catch (error) {
-    console.error("error", error);
+errorResponse(error);
+
+//    console.error("error", error);
   }
 }
 
 function handleLine(line) {
-  //  console.log(data.toString());
+  /*
+        REFERENCE
+        $datagram = [
+            "to" => "null" . $this->mail_postfix,
+            "from" => "job",
+            "subject" => "s/ job stack",
+        ];
+  */
 
-  // Get the from, to and subject from the datagram.
+  var to = channel;
+  var from = "ping";
 
-  // Datagram is an *implied* request from a channel address.
-  var from = "kokopelli:#general@kaiju.discord"; // or var to = "192.168.10.123:10110";
-  var to = "ping";
-
-//  var from = "ping";
-//  var to = "kokopelli:#general@kaiju.discord"; // or var to = "192.168.10.123:10110";
   const subject = line;
   var agent_input = "ping";
-
-  //  match = false;
-
-  console.log(subject);
 
   // Otherwise this is a different datagram.
   // Save it in local memory cache.
 
-  //console.log("SUBJECT", subject);
   const timestamp = new Date();
   const utc = timestamp.toUTCString();
 
-  var arr = { from: from, to: to, subject: subject, agent_input: agent_input };
-  var datagram = JSON.stringify(arr);
+  var arr = {
+    from: from,
+    to: to,
+    subject: subject,
+    agent_input: agent_input,
+    precedence: "routine",
+  };
+  return arr;
+}
 
-  try {
-    var job = client.submitJob("call_agent", datagram);
-    console.log("SENT DATAGRAM TO GEARMAN");
-    console.log(datagram);
-  } catch (e) {
-    console.log(e);
+function datagramCall(http_transport, datagram, accessToken) {
+  axios
+    .post(http_transport, datagram, {
+      headers: {
+        "x-access-token": accessToken,
+        "Content-Type": "application/json",
+      },
+    })
+    .then((result) => {
+      const thing_report = result.data.thingReport;
 
-    var sms = "quiet";
-    var message = "Quietness. Just quietness.";
-  }
+      // Create a fallback message.
+      // Which says 'sms'.
+      sms = "sms";
+      message = "sms";
 
-  job.on("workData", function (data) {
-    // Uncomment for debugging/testing.
-    //    console.log('WORK_DATA >>> ' + data);
-  });
+      try {
+        var sms = thing_report.sms;
+        var message = thing_report.message;
+      } catch (e) {
+        console.error(e);
 
-  job.on("error", function (err) {
-    console.log("ERROR: ", err.message || err);
-    gearman.close();
-  });
+        var sms = "quiet";
+        var message = "Quietness. Just quietness.";
+      }
 
-  job.on("fail", function (handle) {
-    console.log("FAIL");
-  });
+      console.log(sms);
+      console.log(message);
 
-  job.on("failed", function () {
-    console.log("FAILURE >>> " + job.handle);
-    client.close();
-  });
-  job.on("exception", function (text) {
-    // needs configuration of job server session (JobServer#setOption)
-    console.log("EXCEPTION >>> " + text);
-    client.close();
-  });
+      thing_report.log = "nulled";
+      //        console.log(thing_report);
+      console.log(thing_report.link);
+      //    const image_url = thing_report && thing_report.link ? thing_report.link + '.png' : null
 
-  job.on("complete", function () {
-    // Create a fallback message.
-    // Which says 'sms'.
-    sms = "sms";
-    message = "sms";
+      const image_url =
+        thing_report && thing_report.image_url ? thing_report.image_url : null;
 
-    try {
-      //console.log("Job complete",job);
-      var thing_report = JSON.parse(job.response);
-      var sms = thing_report.sms;
-      var message = thing_report.message;
-    } catch (e) {
-      console.log(e);
+      //        console.log(image_url);
+      if (sms !== null) {
+        if (image_url === null) {
+          console.log(sms);
+        } else {
+          console.log(sms);
+          console.log("image(s) available");
+        }
+      }
+    })
+    .catch((error) => {
+errorResponse(error);
 
-      var sms = "quiet";
-      var message = "Quietness. Just quietness.";
-    }
+//      console.log("datagramCall error", error);
+    });
+}
 
-    console.log(sms);
-    console.log(message);
+async function signupUser(credentials) {
+  const { API_PREFIX } = process.env;
 
-    // Respond to the channel with the sms
-    // channel response.
+  return axios
+    .post(API_PREFIX + "/auth/signup", credentials, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      //      })
+    })
+    .then((data) => {
+      console.log(data.data);
+      return data.data;
+    })
+    .catch((error) => {
+errorResponse(error);
+return {message:"Could not signuip."};
 
-    // No response to the message
-    // Just log for now.
-    //    discordMessage.channel.send(sms);
+//      console.error(error);
+    });
+}
 
-    // dev exploring ways to respond.
-    // discordMessage.reply(sms);
-    // message.lineReply(sms); //Line (Inline) Reply with mention
-    // message.lineReplyNoMention(`My name is ${client.user.username}`); //L
-  });
+async function loginUser(credentials) {
+  const { API_PREFIX } = process.env;
+
+  return axios
+    .post(API_PREFIX + "/auth/signin", credentials, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      //      })
+    })
+    .then((data) => {
+      console.log("data.data", data.data);
+      return data.data;
+    })
+    .catch((error) => {
+errorResponse(error);
+return {message:"Could not login."};
+    });
+}
+
+function errorResponse(error) {
+
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.log(error.response.data);
+        console.log(error.response.status);
+        console.log(error.response.headers);
+      } else if (error.request) {
+        // The request was made but no response was received
+        // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+        // http.ClientRequest in node.js
+        console.log(error.request);
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.log("Error", error.message);
+      }
+      console.log(error.config);
+
+
 }
