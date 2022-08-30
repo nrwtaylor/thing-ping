@@ -144,7 +144,7 @@ agent_input:jsonData
   })
   .catch((error) => {
     errorResponse(error);
-\  });
+  });
 
 function puts(error, stdout, stderr, host) {
   const lines = stdout.split("\n");
