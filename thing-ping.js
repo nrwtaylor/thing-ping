@@ -125,11 +125,14 @@ signupUser({
   });
 
 function puts(error, stdout, stderr, host) {
+//console.log("stdout", stdout);
+//return null;
   if (stdout === undefined) {
     return "No output seen.";
   }
   const lines = stdout.split("\n");
   const line = station + " " + host + " " + lines[lines.length - 2]; // Because last lin>
+console.log("line", line);
   return line;
 }
 
@@ -237,7 +240,7 @@ function datagramCall(http_transport, datagram, accessToken) {
 
 async function pingHosts(hosts) {
   const promises = [];
-  hosts.map((h) => {
+  await hosts.map((h) => {
     var host = h;
     const p = ping(host, "a", "b");
     promises.push(p);
@@ -301,9 +304,13 @@ async function resolvePromises(promises, accessToken) {
   const results = await Promise.allSettled(promises)
     .then((values, index) => {
       const arr = [];
-      console.log("Hello");
-      values.map((result) => {
-        console.log("Hello", result);
+      console.log("Hello", values);
+      values.map((response) => {
+        const result = response.value;
+
+if (!result) {return;}
+
+        console.log("Result", result);
         const line = puts(null, result.text, null, result.host);
         arr.push({
           data: line,
