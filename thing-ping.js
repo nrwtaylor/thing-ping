@@ -7,6 +7,8 @@ crypto = require("crypto");
 const { v4: uuidv4 } = require("uuid");
 const { snapshot } = require("./snapshot");
 
+const prodFlag = false;
+
 net = require("net");
 
 const axios = require("axios");
@@ -17,7 +19,7 @@ var exec = require("child_process").exec;
 const childProcess = require("child_process");
 
 // 26 September 2021
-console.log("thing-ping 1.0.4 28 August 2022");
+console.log("thing-ping 1.0.5 6 September 2022");
 
 //const client = gearmanode.client();
 //
@@ -85,71 +87,50 @@ signupUser({
 
         const { accessToken } = token2;
 
-        setInterval(function () {
-          //exec("ping -c 3 localhost", puts);
+        setInterval(
+          function () {
+            //exec("ping -c 3 localhost", puts);
 
-          //  console.log("I am doing my 1 minute check again");
-          const m = [];
-          // do your stuff here
-          console.log("hosts", hosts);
-          console.log("accessToken", accessToken);
-          const arr = [];
-          const promises = [];
-          hosts.map((h) => {
-            var host = h;
-            const p = ping(host, "a", "b");
-            promises.push(p);
-          });
+            const m = [];
 
-          Promise.all(promises).then((values, index) => {
-            const arr = [];
+            console.log("hosts", hosts);
+            console.log("accessToken", accessToken);
 
-            values.map((result) => {
-              const line = puts(null, result.text, null, result.host);
-              arr.push({
-                data: line,
-                host: result.host,
-                refreshedAt: result.refreshedAt,
+            pingHosts(hosts)
+              .then((promises) => {
+                return resolvePromises(promises, accessToken)
+                  .then((result) => {
+                    console.log(result);
+                  })
+                  .catch((error) => {
+                    errorResponse(error);
+                  });
+              })
+              .catch((error) => {
+                console.log("pingHosts");
+                errorResponse(error);
               });
-            });
-
-            const jsonData = JSON.stringify({ ping: arr });
-            fs.writeFile(snapshotFilename, jsonData, "utf8", (err) => {
-              if (err) {
-                console.log(`Error writing file: ${err}`);
-              } else {
-                console.log(`File is written successfully!`);
-              }
-            });
-const datagram= {
-from:"null",
-to:"null",
-subject:"ping",
-agent_input:jsonData
-}
-                      if (transport === "apache") {
-                        const u = process.env.API_PREFIX;
-                        datagramCall(u + "/thing", datagram, accessToken);
-                        datagramCall(http_transport, datagram, null);
-                      }
-
-
-          }).catch((error)=>{console.error(error);});;
-
-        }, the_interval);
+          },
+          [the_interval]
+        );
       })
       .catch((error) => {
-        console.log(error);
+        console.log("Token request error");
+        errorResponse(error);
       });
   })
   .catch((error) => {
+    console.log("Token request error");
     errorResponse(error);
   });
 
 function puts(error, stdout, stderr, host) {
+  if (stdout === undefined) {
+    return "No output seen.";
+  }
   const lines = stdout.split("\n");
   const line = station + " " + host + " " + lines[lines.length - 2]; // Because last lin>
-return line;
+  return line;
 }
 
 function systemPing(host) {
@@ -240,9 +221,9 @@ function datagramCall(http_transport, datagram, accessToken) {
       //        console.log(image_url);
       if (sms !== null) {
         if (image_url === null) {
-          console.log(sms);
+          console.log("sms", sms);
         } else {
-          console.log(sms);
+          console.log("sms", sms);
           console.log("image(s) available");
         }
       }
@@ -252,6 +233,17 @@ function datagramCall(http_transport, datagram, accessToken) {
 
       //      console.log("datagramCall error", error);
     });
+}
+
+async function pingHosts(hosts) {
+  const promises = [];
+  hosts.map((h) => {
+    var host = h;
+    const p = ping(host, "a", "b");
+    promises.push(p);
+  });
+
+  return promises;
 }
 
 async function signupUser(credentials) {
@@ -265,7 +257,7 @@ async function signupUser(credentials) {
       //      })
     })
     .then((data) => {
-      console.log(data.data);
+      consoleResponse(data.data);
       return data.data;
     })
     .catch((error) => {
@@ -296,23 +288,87 @@ async function loginUser(credentials) {
     });
 }
 
+function consoleResponse(result) {
+  if (prodFlag === true) {
+    return;
+  }
+  console.log(result);
+}
+
+async function resolvePromises(promises, accessToken) {
+  console.log("resolvePromises");
+
+  const results = await Promise.allSettled(promises)
+    .then((values, index) => {
+      const arr = [];
+      console.log("Hello");
+      values.map((result) => {
+        console.log("Hello", result);
+        const line = puts(null, result.text, null, result.host);
+        arr.push({
+          data: line,
+          host: result.host,
+          refreshedAt: result.refreshedAt,
+        });
+      });
+
+      const jsonData = JSON.stringify({ ping: arr });
+
+      console.log("Test");
+      fs.writeFile(snapshotFilename, jsonData, "utf8", (error) => {
+        if (error) throw error;
+        //                  console.log(`Error writing file: ${err}`);
+        //                } else {
+        console.log(`File is written successfully!`);
+        //                }
+      });
+      const datagram = {
+        from: "null",
+        to: "null",
+        subject: "ping",
+        agent_input: jsonData,
+      };
+      if (transport === "apache") {
+        const u = process.env.API_PREFIX;
+        datagramCall(u + "/thing", datagram, accessToken);
+        datagramCall(http_transport, datagram, null);
+      }
+    })
+    .catch((error) => {
+      console.log("Promise all fail");
+      errorResponse(error);
+    });
+  if (results === undefined) {
+    return Promise.reject("Promises undefined.");
+  }
+
+  const validResults =
+    results && results.filter((result) => !(result instanceof Error));
+
+  return Promise.resolve(validResults);
+}
+
 function errorResponse(error) {
-  if (error.response) {
+  console.error(error);
+  if (error && error.response) {
     // The request was made and the server responded with a status code
     // that falls out of the range of 2xx
     console.log(error.response.data);
     console.log(error.response.status);
     console.log(error.response.headers);
-  } else if (error.request) {
+  } else if (error && error.request) {
     // The request was made but no response was received
     // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
     // http.ClientRequest in node.js
     console.log(error.request);
-  } else {
+  } else if (error && error.message) {
     // Something happened in setting up the request that triggered an Error
-    console.log("Error", error.message);
+    console.log("Error message", error.message);
+  } else {
+    console.log("error", error);
   }
-  console.log(error.config);
+
+  console.log("error config", error && error.config);
 }
 
 function execute(command) {
