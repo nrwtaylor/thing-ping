@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 
+/*
+
+Node service to ping a list of identified IP stations,
+log locally, and share to an available IP stack.
+
+*/
+
 require("dotenv").config();
 crypto = require("crypto");
 
@@ -19,10 +26,10 @@ var exec = require("child_process").exec;
 const childProcess = require("child_process");
 
 // 26 September 2021
-console.log("thing-ping 1.0.5 6 September 2022");
+console.log("thing-ping 1.0.7 15 November 2022");
 
-//const client = gearmanode.client();
-//
+console.log = function () {};
+
 /*
 Standard stack stuff above.
 */
@@ -53,6 +60,7 @@ var ping = function (host, username, password) {
       console.log(result);
       resolve({ text: result, refreshedAt: t, host: host });
     }).catch((error) => {
+      console.error("Error pinging",host);
       console.log(error);
       reject(error);
     });
@@ -103,11 +111,12 @@ signupUser({
                     console.log(result);
                   })
                   .catch((error) => {
+                    console.error("thing-ping resolvePromises error", error);
                     errorResponse(error);
                   });
               })
               .catch((error) => {
-                console.log("pingHosts");
+                console.error("thing-ping pingHosts error");
                 errorResponse(error);
               });
           },
@@ -115,24 +124,24 @@ signupUser({
         );
       })
       .catch((error) => {
-        console.log("Token request error");
+        console.error("thing-ping Token request error");
         errorResponse(error);
       });
   })
   .catch((error) => {
-    console.log("Token request error");
+    console.error("thing-ping Token request error");
     errorResponse(error);
   });
 
 function puts(error, stdout, stderr, host) {
-//console.log("stdout", stdout);
-//return null;
+  //console.log("stdout", stdout);
+  //return null;
   if (stdout === undefined) {
     return "No output seen.";
   }
   const lines = stdout.split("\n");
   const line = station + " " + host + " " + lines[lines.length - 2]; // Because last lin>
-console.log("line", line);
+  console.log("line", line);
   return line;
 }
 
@@ -147,6 +156,7 @@ function systemPing(host) {
     exec(`ping ${host} -c 3`, makePingCall);
     return makePingCall;
   } catch (error) {
+    console.error("thing-ping systemPing error");
     errorResponse(error);
 
     //    console.error("error", error);
@@ -205,13 +215,14 @@ function datagramCall(http_transport, datagram, accessToken) {
         var sms = thing_report.sms;
         var message = thing_report.message;
       } catch (e) {
-        console.error(e);
+        console.error("thing-ping datagramCall", http_transport);
+        console.log("thing-ping datagramCall", e);
 
         var sms = "quiet";
         var message = "Quietness. Just quietness.";
       }
 
-      console.log(sms);
+      console.info(sms);
       console.log(message);
 
       thing_report.log = "nulled";
@@ -232,6 +243,9 @@ function datagramCall(http_transport, datagram, accessToken) {
       }
     })
     .catch((error) => {
+      if (error.code === "ENOTFOUND") {
+        console.error("Could not find", http_transport);
+      }
       errorResponse(error);
 
       //      console.log("datagramCall error", error);
@@ -299,18 +313,19 @@ function consoleResponse(result) {
 }
 
 async function resolvePromises(promises, accessToken) {
-  console.log("resolvePromises");
+  console.info("resolvePromises promises length", promises.length);
 
   const results = await Promise.allSettled(promises)
     .then((values, index) => {
       const arr = [];
-      console.log("Hello", values);
+      console.log("thing-ping values", values);
       values.map((response) => {
         const result = response.value;
 
-if (!result) {return;}
+        if (!result) {
+          return;
+        }
 
-        console.log("Result", result);
         const line = puts(null, result.text, null, result.host);
         arr.push({
           data: line,
@@ -321,12 +336,12 @@ if (!result) {return;}
 
       const jsonData = JSON.stringify({ ping: arr });
 
-      console.log("Test");
+      console.log("thing-ping jsonData", jsonData);
       fs.writeFile(snapshotFilename, jsonData, "utf8", (error) => {
         if (error) throw error;
         //                  console.log(`Error writing file: ${err}`);
         //                } else {
-        console.log(`File is written successfully!`);
+        console.info("thing-ping wrote file", snapshotFilename);
         //                }
       });
       const datagram = {
@@ -340,23 +355,32 @@ if (!result) {return;}
         datagramCall(u + "/thing", datagram, accessToken);
         datagramCall(http_transport, datagram, null);
       }
+      return {ping:arr};
     })
     .catch((error) => {
-      console.log("Promise all fail");
+      console.error("Promise all fail");
       errorResponse(error);
     });
+
   if (results === undefined) {
+    console.error("thing-ping no results");
     return Promise.reject("Promises undefined.");
   }
 
+  if (results.ping === undefined) {
+    console.error("thing-ping no ping variable");
+    return Promise.reject("No ping variable.");
+  }
+
+
   const validResults =
-    results && results.filter((result) => !(result instanceof Error));
+    results && results.ping && results.ping.filter((result) => !(result instanceof Error));
 
   return Promise.resolve(validResults);
 }
 
 function errorResponse(error) {
-  console.error(error);
+  //console.error(error);
   if (error && error.response) {
     // The request was made and the server responded with a status code
     // that falls out of the range of 2xx
