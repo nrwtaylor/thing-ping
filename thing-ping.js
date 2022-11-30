@@ -222,7 +222,7 @@ function datagramCall(http_transport, datagram, accessToken) {
         var message = "Quietness. Just quietness.";
       }
 
-      console.info(sms);
+      console.info("thing-ping",sms);
       console.log(message);
 
       thing_report.log = "nulled";
@@ -313,7 +313,7 @@ function consoleResponse(result) {
 }
 
 async function resolvePromises(promises, accessToken) {
-  console.info("resolvePromises promises length", promises.length);
+  console.info("thing-ping","resolvePromises promises length", promises.length);
 
   const results = await Promise.allSettled(promises)
     .then((values, index) => {
