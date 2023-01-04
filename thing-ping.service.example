@@ -1,0 +1,19 @@
+[Unit]
+Description=Thing-Ping
+After=
+
+[Service]
+ExecStart=/usr/local/bin/node /home/user/thing-ping/thing-ping.js
+#Restart=on-failure
+Restart=on-failure
+RestartSec=10
+User=bob
+# Note Debian/Ubuntu uses 'nogroup', RHEL/Fedora uses 'nobody'
+#Group=root
+Environment=PATH=/usr/bin:/usr/local/bin
+Environment=NODE_ENV=production
+WorkingDirectory=/home/user/thing-ping/thing-ping
+
+[Install]
+WantedBy=multi-user.target
+

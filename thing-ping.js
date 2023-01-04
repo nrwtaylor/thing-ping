@@ -16,16 +16,13 @@ var sys = require("sys");
 var exec = require("child_process").exec;
 const childProcess = require("child_process");
 // 26 September 2021
-console.log("thing-ping 1.0.3 30 July 2022");
+console.log("thing-ping 1.0.4 4 January 2023");
 
 const client = gearmanode.client();
 //
 /*
 Standard stack stuff above.
 */
-//var ping = require('ping');
-//var Ping = require('ping-wrapper')
-//Ping.configure();
 
 var hosts = process.env.STATIONS.split(" ");
 var channel = process.env.CHANNEL;
@@ -34,20 +31,21 @@ var interval_milliseconds = process.env.INTERVAL;
 var http_transport = process.env.HTTP_TRANSPORT;
 var station = process.env.STATION;
 var snapshotFilename = process.env.SNAPSHOT;
-//var minutes = 1,
+
 the_interval = interval_milliseconds;
 
 var ping = function (host, username, password) {
   return new Promise(function (resolve, reject) {
-    /*stuff using username, password*/
+
     const t = new Date();
     const p = execute("/bin/ping -c 3 " + host);
     p.then((result) => {
-      console.log(result);
+      console.log("ping host result", host, result);
       resolve({ text: result, refreshedAt: t, host: host });
     }).catch((error) => {
-      console.log(error);
-      reject(error);
+      console.log("ping host error", host, error);
+      //reject(error);
+      resolve({text:null, error:true, refreshedAt:t, host:host});
     });
   });
 };
@@ -90,9 +88,14 @@ A function to process the exec return.
 function puts(error, stdout, stderr, host) {
   console.log("host", host);
   console.log("stdout", stdout);
+
+var line = station + " " + host;
+if (stdout !== null) {
   const lines = stdout.split("\n");
   console.log("test", lines[lines.length - 2]);
-  const line = station + " " + host + " " + lines[lines.length - 2]; // Because last lin>
+  line = station + " " + host + " " + lines[lines.length - 2]; // Because last lin>
+}
+
   console.log("line", line);
   handleLine(line);
   return line;
@@ -180,10 +183,10 @@ function handleLine(line) {
           var message = "Quietness. Just quietness.";
         }
 
-        console.log(sms);
-        console.log(message);
-        console.log(thing_report.png);
-        console.log(thing_report.pngs);
+        console.log("sms", sms);
+        console.log("message", message);
+        console.log("thing_report.png", thing_report.png);
+        console.log("thing_report.pngs", thing_report.pngs);
 
         thing_report.log = "nulled";
 
@@ -198,14 +201,14 @@ function handleLine(line) {
             console.log(sms);
             //        discordMessage.channel.send(sms);
           } else {
-            console.log(sms);
+            console.log("sms", sms);
             console.log("image(s) available");
             //        discordMessage.channel.send(sms, { files: [image_url] });
           }
         }
       })
       .catch((error) => {
-        console.log(error);
+        console.log("axios post error", error);
       });
   }
 
